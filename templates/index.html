@@ -1,0 +1,54 @@
+<!-- templates/index.html -->
+{% extends "base.html" %} {% block title %}Home - Scraper Dashboard{% endblock %} {% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <h4>Recent Scraped Items</h4>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Price</th>
+          <th>Availability</th>
+          <th>Scraped At</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in books %}
+        <tr>
+          <td><a href="{{ b.url }}" target="_blank">{{ b.title }}</a></td>
+          <td>£{{ "%.2f"|format(b.price) }}</td>
+          <td>{{ b.availability }}</td>
+          <td>{{ b.scraped_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4">No data yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="col-md-4">
+    <h4>Price Trend</h4>
+    <canvas id="priceChart" width="400" height="300"></canvas>
+    <script>
+      const labels = {{ chart.labels|tojson }};
+      const data = {{ chart.data|tojson }};
+      const ctx = document.getElementById('priceChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Avg Price',
+            data: data,
+            fill: false,
+            tension: 0.1
+          }]
+        },
+        options: { responsive: true }
+      });
+    </script>
+  </div>
+</div>
+{% endblock %}
