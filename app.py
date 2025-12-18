@@ -2,6 +2,7 @@
 from flask import Flask, render_template
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import func, select
+from scraper.scraper import scrape_catalog
 
 from models import get_engine, Book
 
@@ -14,36 +15,37 @@ SessionLocal = sessionmaker(bind=engine)
 
 @app.route("/")
 def index():
-    session = SessionLocal()
-    try:
-        # latest 50 books (ORM objects)
-        books = session.query(Book).order_by(Book.scraped_at.desc()).limit(50).all()
+    engine = get_engine_obj()
 
-        # average price per day (aggregates)
-        agg = (
-            session.query(
-                func.date(Book.scraped_at),
-                func.avg(Book.price),
+    # AUTO-POPULATE DB ON FIRST RUN (Render-safe)
+    with engine.connect() as conn:
+        count = conn.execute(select(func.count()).select_from(Book)).scalar()
+
+    if count == 0:
+        # scrape first page only to keep startup fast
+        scrape_catalog(page_limit=1, delay=1.5)
+
+    with engine.connect() as conn:
+        stmt = select(Book).order_by(Book.scraped_at.desc()).limit(50)
+        rows = conn.execute(stmt).scalars().all()
+
+        agg_stmt = (
+            select(
+                func.date(Book.scraped_at).label("day"),
+                func.avg(Book.price).label("avg_price"),
             )
             .group_by(func.date(Book.scraped_at))
             .order_by(func.date(Book.scraped_at).desc())
             .limit(14)
-            .all()
         )
-    finally:
-        session.close()
+        agg = conn.execute(agg_stmt).all()
 
-    # prepare data for chart
     chart_data = {
         "labels": [row[0] for row in reversed(agg)],
         "data": [round(row[1], 2) for row in reversed(agg)],
     }
 
-    return render_template(
-        "index.html",
-        books=books,
-        chart=chart_data,
-    )
+    return render_template("index.html", books=rows, chart=chart_data)
 
 
 if __name__ == "__main__":
