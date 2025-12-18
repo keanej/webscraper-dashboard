@@ -1,6 +1,9 @@
 ```md
 # Web Scraper Dashboard
 
+🔗 **Live Demo:**  
+https://webscraper-dashboard.onrender.com
+
 A Python web application that scrapes book data from a public website, stores it in a SQLite database, and displays the results in a simple Flask-based dashboard with tables and charts.
 
 This project demonstrates responsible web scraping, data persistence, and turning raw data into a usable web interface.
